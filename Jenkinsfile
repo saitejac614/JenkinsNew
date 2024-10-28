@@ -1,28 +1,30 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKER_REPO = "saitejac614"
+        IMAGE_NAME = "jenkins-app"
+        IMAGE_TAG = "latest"
+    }
+
     stages {
         stage('Build') {
             steps {
                 script {
                     echo 'Building the Docker image...'
-                    sh 'docker build -t simple-flask-app .'
+                    sh "docker build -t ${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG} ."
                 }
             }
         }
-        stage('Test') {
+        stage('Push to Docker Hub') {
             steps {
                 script {
-                    echo 'Running simple tests...'
-                    sh 'docker run --rm simple-flask-app curl -f http://localhost:5000 || exit 1'
-                }
-            }
-        }
-        stage('Deploy') {
-            steps {
-                script {
-                    echo 'Deploying the application...'
-                    // Add deployment steps here (e.g., push to a registry)
+                    echo 'Logging into Docker Hub...'
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                        sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin"
+                    }
+                    echo 'Pushing Docker image to Docker Hub...'
+                    sh "docker push ${DOCKER_REPO}/${IMAGE_NAME}:${IMAGE_TAG}"
                 }
             }
         }
